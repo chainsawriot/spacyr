@@ -371,6 +371,53 @@ class spacyr:
             timestamps = [timestamps]
         for ts in timestamps:
             self.nlp.parser(self.documents[ts])
+    
+    def run_neuralcoref(self, timestamps):
+        if isinstance(timestamps, list) == False:
+            timestamps = [timestamps]
+        for name, proc in self.nlp.pipeline:
+            if name == 'neuralcoref':
+                for ts in timestamps:
+                    self.documents[ts] = proc(self.documents[ts])
+
+    def coref(self, timestamps):
+        if isinstance(timestamps, list) == False:
+            timestamps = [timestamps]
+        all_coref = []
+        full_n = 0
+        for doc_i, ts in enumerate(timestamps):
+          doc = self.documents[ts]
+          n = len(doc)
+
+          # create index for sentence_id and token_id
+          token_i = [None] * n
+          sent_i = [None] * n
+          i = 0
+          for si, sent in enumerate(doc.sents): 
+              for wi, w in enumerate(sent): 
+                  token_i[i] = wi+1
+                  sent_i[i] = si+1
+                  i += 1
+          
+          
+          cr = []
+          i = 0
+          for sent in doc.sents:
+              for w in sent:
+                  clusters = w._.coref_clusters
+                  for cluster in clusters:
+                      l = cluster.main.start
+                      r = cluster.main.end
+                      if i >= l and i < r: continue  # do not add coref to the cluster.main tokens
+                      cr.append({'i': i,
+                                 'coref_text': str(cluster.main),
+                                 'coref_span_sentence': sent_i[l],
+                                 'coref_span_first': token_i[l],
+                                 'coref_span_last': token_i[r-1]})
+                      continue   # max 1 coref per token
+                  i += 1
+          all_coref.append({"n": n, "coref": cr})
+        return all_coref
 
     def list_entities(self, timestamps):
         all_entities = {}
@@ -384,6 +431,8 @@ class spacyr:
                 entities.append((entity.label_, ' '.join(t.orth_ for t in entity)))
             all_entities[ts] = entities
         return all_entities
+
+
 
     def dep_head_id(self, timestamps):
         all_head_ids = []

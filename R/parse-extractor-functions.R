@@ -7,11 +7,13 @@ spacy_out <- setRefClass(
         docnames = "character",
         tagger = "logical",
         entity = "logical",
+        coref = "logical",
         parser = "logical"
     ),
     methods = list(
         initialize = function(timestamps = NULL, docnames = NULL) {
             tagger <<- entity <<- parser <<- TRUE
+            coref <<- FALSE
             timestamps <<- timestamps
             docnames <<- docnames
         }
@@ -118,7 +120,31 @@ get_dependency <- function(spacy_out) {
     head_id <- spacyr_pyget("head_id") + 1 # + 1 is for fixing the start index to 1
 
     dep_rel <- get_attrs(spacy_out, "dep_")
+    
     return(list(head_id = head_id, dep_rel = dep_rel))
+}
+
+#' @rdname get-functions
+#' @return \code{get_coref} returns a data.frame of coreference resolution clusters.
+#' @export
+#' @keywords internal
+get_coref <- function(spacy_out) {
+  spacyr_pyassign("timestamps", spacy_out$timestamps)
+  if (spacy_out$coref == FALSE) {
+    spacyr_pyexec("tags_list = spobj.run_neuralcoref(timestamps)")
+    spacy_out$coref <- TRUE
+  }
+  spacyr_pyexec('corefs = spobj.coref(timestamps)')
+  docs = spacyr_pyget('corefs')
+  df_list = lapply(docs, function(doc) {
+    # doc is a list that contains the document length (doc$n) and corefs (doc$coref) with positions (doc$coref$i)
+    d = data.table(coref_text=rep(NA_character_, doc$n), 
+                   coref_span_sentence=NA_integer_, coref_span_first=NA_integer_, coref_span_last=NA_integer_)
+    cref = data.table::rbindlist(doc$coref)
+    d[cref$i+1] = cref[,-'i']
+    d
+  })
+  return(data.table::rbindlist(df_list))
 }
 
 

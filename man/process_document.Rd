@@ -4,7 +4,7 @@
 \alias{process_document}
 \title{Tokenize text using spaCy}
 \usage{
-process_document(x, multithread, ...)
+process_document(x, multithread, coref = F, ...)
 }
 \arguments{
 \item{x}{input text

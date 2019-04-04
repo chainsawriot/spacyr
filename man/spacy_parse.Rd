@@ -5,8 +5,9 @@
 \title{Parse a text using spaCy}
 \usage{
 spacy_parse(x, pos = TRUE, tag = FALSE, lemma = TRUE,
-  entity = TRUE, dependency = FALSE, nounphrase = FALSE,
-  multithread = TRUE, additional_attributes = NULL, ...)
+  entity = TRUE, dependency = FALSE, coref = FALSE,
+  nounphrase = FALSE, multithread = TRUE,
+  additional_attributes = NULL, ...)
 }
 \arguments{
 \item{x}{a character object, a \pkg{quanteda} corpus, or a TIF-compliant
@@ -28,6 +29,10 @@ may not work properly for non-English models)}
 \item{entity}{logical; if \code{TRUE}, report named entities}
 
 \item{dependency}{logical; if \code{TRUE}, analyse and tag dependencies}
+
+\item{coref}{logical; if \code{TRUE}, analyze and tag coreference clusters.
+This requires a spacy model that contains a coreference resolution 
+component, which can be downloaded with \code{spacy_download_neuralcoref}.}
 
 \item{nounphrase}{logical; if \code{TRUE}, analyse and tag noun phrases
 tags}

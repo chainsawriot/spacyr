@@ -76,7 +76,8 @@ spacy_initialize <- function(model = "en",
     options("python_initialized" = TRUE) # next line could cause non-recoverable error
     spacyr_pyexec(pyfile = system.file("python", "spacyr_class.py",
                                        package = "spacyr"))
-
+    
+    
     spacyr_pyassign("model", model)
     spacyr_pyassign("spacy_entity", entity)
     options("spacy_entity" = entity)

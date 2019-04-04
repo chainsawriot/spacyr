@@ -24,6 +24,9 @@
 #' @param multithread logical; If \code{TRUE}, the processing is parallelized
 #'   using pipe functionality of spaCy (\url{https://spacy.io/api/pipe})
 #' @param dependency logical; if \code{TRUE}, analyse and tag dependencies
+#' @param coref logical; if \code{TRUE}, analyze and tag coreference clusters.
+#'   This requires a spacy model that contains a coreference resolution 
+#'   component, which can be downloaded with \code{spacy_download_neuralcoref}. 
 #' @param nounphrase logical; if \code{TRUE}, analyse and tag noun phrases
 #'   tags
 #' @param additional_attributes a character vector; this option is for
@@ -62,6 +65,7 @@ spacy_parse <- function(x,
                         lemma = TRUE,
                         entity = TRUE,
                         dependency = FALSE,
+                        coref = FALSE,
                         nounphrase = FALSE,
                         multithread = TRUE,
                         additional_attributes = NULL,
@@ -78,17 +82,20 @@ spacy_parse.character <- function(x,
                                   lemma = TRUE,
                                   entity = TRUE,
                                   dependency = FALSE,
+                                  coref = FALSE,
                                   nounphrase = FALSE,
                                   multithread = TRUE,
                                   additional_attributes = NULL,
                                   ...) {
 
     `:=` <- `.` <- `.N` <- NULL
-    spacy_out <- process_document(x, multithread)
+    
+    spacy_out <- process_document(x, multithread, coref=coref)
     if (is.null(spacy_out$timestamps)) {
         stop("Document parsing failed")
     }
-
+    
+ 
     ## check the omit_entity status
     if (entity == TRUE & getOption("spacy_entity") == FALSE) {
         message("entity == TRUE is ignored because spaCy model is initialized without Entity Recognizer")
@@ -108,7 +115,7 @@ spacy_parse.character <- function(x,
     if (lemma) {
         model <- spacyr_pyget("model")
         dt[, "lemma" := get_attrs(spacy_out, "lemma_", TRUE)]
-        if (model != "en"){
+        if (!grepl('^en$|^en_coref', model)){
             warning("lemmatization may not work properly in model '", model, "'")
         }
     }
@@ -118,7 +125,7 @@ spacy_parse.character <- function(x,
     if (tag) {
         dt[, "tag" := get_tags(spacy_out, "detailed")]
     }
-
+    
     ## add dependency data fields
     if (dependency) {
         subtractor <- unlist(lapply(ntokens_by_sent, function(x) {
@@ -129,6 +136,12 @@ spacy_parse.character <- function(x,
         deps <- get_dependency(spacy_out)
         dt[, c("head_token_id", "dep_rel") := list(deps$head_id - subtractor,
                                                    deps$dep_rel)]
+    }
+    
+    ## add coreference resolution clusters 
+    if (coref) {
+      cr = get_coref(spacy_out)
+      dt[, c('coref_text','coref_span_sentence','coref_span_start','coref_span_end') := cr]
     }
 
     ## named entity fields
@@ -213,7 +226,7 @@ spacy_parse.data.frame <- function(x, ...) {
 #' }
 #' @export
 #' @keywords internal
-process_document <- function(x, multithread, ...) {
+process_document <- function(x, multithread, coref=F, ...) {
     # This function passes texts to python and spacy
     # get or set document names
     if (!is.null(names(x))) {
@@ -227,7 +240,10 @@ process_document <- function(x, multithread, ...) {
         stop("Some docnames are missing.")
     }
 
-    if (is.null(options()$spacy_initialized)) spacy_initialize()
+    if (is.null(options()$spacy_initialized)) {
+      if (coref) stop("To use coreference resolution, a coreference model (e.g., en_core_md) has to be initialized. A coreference model can be downloaded with spacy_download_neuralcoref")
+      spacy_initialize()
+    } 
     spacyr_pyexec("try:\n del spobj\nexcept NameError:\n 1")
     spacyr_pyexec("texts = []")
 
@@ -239,6 +255,12 @@ process_document <- function(x, multithread, ...) {
     spacyr_pyassign("texts", x)
     spacyr_pyassign("multithread", multithread)
     spacyr_pyexec("spobj = spacyr()")
+    
+    if (coref) {
+      spacyr_pyexec("pipe = [tup[0] for tup in spobj.nlp.pipeline]")
+      pipe = spacyr_pyget("pipe")
+      if (!'neuralcoref' %in% pipe) stop("Initialized spacy model pipeline does not contain a coreference component")
+    }
 
     spacyr_pyexec("timestamps = spobj.parse(texts, multithread = multithread)")
 
