@@ -14,6 +14,29 @@ Downloads](https://cranlogs.r-pkg.org/badges/grand-total/spacyr?color=orange)](h
 An R wrapper to the spaCy “industrial strength natural language
 processing”" Python library from <https://spacy.io>.
 
+## Note about this fork
+
+This fork of spacyr supports the use of coreference resolutions using the neuralcoref models. 
+The models can be downloaded with the **spacy_download_neuralcoref()** function.
+If a neuralcoref model is initialized, coreference resolution can be used with the coref=T argument in spacy_parse.
+
+HOWEVER, there are some hoops to jump. neuralcoref currently does not work with spacy version >= 2.1.0. 
+Using version 2.0.12 works, but if it is downgraded, there might in turn be some numpy related issues. 
+A clean install of miniconda and spacyr works for me:
+
+``` r
+spacy_install(version = '2.0.12')
+
+spacy_download_neuralcoref('en_coref_md')
+spacy_initialize('en_coref_md')
+
+spacy_parse('Steve and Anna said that they will be there. She convinced him',
+            dependency=T, coref=T)
+```
+
+Note that I mainly developed this for own use, and have only tested on Linux. Once the version issues are solved
+it might be good to see whether it is worthwhile to make a pullrequest. 
+
 ## Installing the package
 
 1.  Install miniconda
