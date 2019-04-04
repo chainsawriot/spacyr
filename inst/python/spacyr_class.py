@@ -402,20 +402,21 @@ class spacyr:
           
           cr = []
           i = 0
-          for sent in doc.sents:
-              for w in sent:
-                  clusters = w._.coref_clusters
-                  for cluster in clusters:
-                      l = cluster.main.start
-                      r = cluster.main.end
-                      if i >= l and i < r: continue  # do not add coref to the cluster.main tokens
-                      cr.append({'i': i,
-                                 'coref_text': str(cluster.main),
-                                 'coref_span_sentence': sent_i[l],
-                                 'coref_span_first': token_i[l],
-                                 'coref_span_last': token_i[r-1]})
-                      continue   # max 1 coref per token
-                  i += 1
+          if doc._.has_coref:
+              for sent in doc.sents:
+                  for w in sent:
+                      clusters = w._.coref_clusters
+                      for cluster in clusters:
+                          l = cluster.main.start
+                          r = cluster.main.end
+                          if i >= l and i < r: continue  # do not add coref to the cluster.main tokens
+                          cr.append({'i': i,
+                                     'coref_text': str(cluster.main),
+                                     'coref_span_sentence': sent_i[l],
+                                     'coref_span_first': token_i[l],
+                                     'coref_span_last': token_i[r-1]})
+                          break  # max 1 coref per token
+                      i += 1
           all_coref.append({"n": n, "coref": cr})
         return all_coref
 

@@ -140,8 +140,10 @@ get_coref <- function(spacy_out) {
     # doc is a list that contains the document length (doc$n) and corefs (doc$coref) with positions (doc$coref$i)
     d = data.table(coref_text=rep(NA_character_, doc$n), 
                    coref_span_sentence=NA_integer_, coref_span_first=NA_integer_, coref_span_last=NA_integer_)
-    cref = data.table::rbindlist(doc$coref)
-    d[cref$i+1] = cref[,-'i']
+    if (length(doc$coref) > 0) {
+      cref = data.table::rbindlist(doc$coref)
+      d[cref$i+1] = cref[,-'i']
+    }
     d
   })
   return(data.table::rbindlist(df_list))
